@@ -853,7 +853,7 @@
             updateButtonStates();
         }
 
-        // Save to Google Sheets via Apps Script
+        // Save to Google Sheets via Apps Script (using GET to avoid CORS)
         async function saveToGoogleSheets() {
             try {
                 const today = todayData.date;
@@ -867,21 +867,21 @@
                     'krank': 'Krank'
                 };
                 
-                const dataToSend = {
+                // Build URL with parameters (GET request to avoid CORS)
+                const params = new URLSearchParams({
+                    action: 'save',
                     date: today,
                     workMode: modeTranslation[todayData.workMode] || todayData.workMode,
-                    'home-departure': todayData['home-departure'],
-                    'work-arrival': todayData['work-arrival'],
-                    'work-departure': todayData['work-departure'],
-                    'home-arrival': todayData['home-arrival']
-                };
+                    homeDeparture: todayData['home-departure'] || '',
+                    workArrival: todayData['work-arrival'] || '',
+                    workDeparture: todayData['work-departure'] || '',
+                    homeArrival: todayData['home-arrival'] || ''
+                });
                 
-                const response = await fetch(config.appsScriptUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(dataToSend)
+                const url = `${config.appsScriptUrl}?${params.toString()}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET'
                 });
                 
                 const result = await response.json();
