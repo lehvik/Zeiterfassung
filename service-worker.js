@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arbeitszeit-tracker-v1';
+const CACHE_NAME = 'arbeitszeit-tracker-v2';
 const urlsToCache = [
   './timetracker.html',
   './manifest.json',

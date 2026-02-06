@@ -1,23 +1,20 @@
-<!DOCTYPE html>
+<!DOCTYPE HTML>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Erfasse deine Arbeitszeiten einfach und zuverlässig">
+    <meta name="description" content="Professionelle Arbeitszeiterfassung">
     <meta name="theme-color" content="#667eea">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Zeiterfassung">
     
-    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-    
-    <!-- Icons -->
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
     <link rel="apple-touch-icon" href="icon-192.png">
     
-    <title>Arbeitszeit Tracker</title>
+    <title>Arbeitszeit Tracker Pro</title>
     <style>
         * {
             margin: 0;
@@ -26,7 +23,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
@@ -42,27 +39,32 @@
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
         }
 
         h1 {
             color: #333;
             margin-bottom: 10px;
-            font-size: 28px;
+            font-size: 24px;
         }
 
         .subtitle {
             color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
+            margin-bottom: 20px;
+            font-size: 13px;
         }
 
         /* Setup Screen */
-        .setup-screen {
+        .setup-screen, .main-screen {
             display: none;
         }
 
-        .setup-screen.active {
+        .setup-screen.active, .main-screen.active {
             display: block;
+        }
+
+        .hidden {
+            display: none !important;
         }
 
         .info-box {
@@ -71,23 +73,8 @@
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.6;
-        }
-
-        .info-box strong {
-            display: block;
-            margin-bottom: 8px;
-            color: #1976D2;
-        }
-
-        .info-box ol {
-            margin-left: 20px;
-            margin-top: 10px;
-        }
-
-        .info-box li {
-            margin-bottom: 5px;
         }
 
         .form-group {
@@ -103,19 +90,26 @@
         }
 
         input[type="text"],
-        input[type="password"] {
+        input[type="time"],
+        select,
+        textarea {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
             border-radius: 8px;
             font-size: 14px;
             transition: border-color 0.3s;
+            font-family: inherit;
         }
 
-        input[type="text"]:focus,
-        input[type="password"]:focus {
+        input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
         }
 
         .hint {
@@ -140,7 +134,7 @@
             color: white;
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
@@ -155,15 +149,12 @@
             background: #e0e0e0;
         }
 
-        /* Main App Screen */
-        .main-screen {
-            display: none;
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
-        .main-screen.active {
-            display: block;
-        }
-
+        /* Status Display */
         .status-display {
             background: #f8f9fa;
             padding: 15px;
@@ -173,7 +164,7 @@
         }
 
         .current-date {
-            font-size: 16px;
+            font-size: 14px;
             color: #666;
             margin-bottom: 5px;
         }
@@ -184,42 +175,45 @@
             font-weight: 500;
         }
 
+        /* Work Mode Section */
+        .work-mode-section {
+            margin-bottom: 20px;
+        }
+
+        .mode-selector {
+            position: relative;
+        }
+
+        /* Tracking Buttons */
         .tracking-buttons {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 15px;
+            gap: 12px;
             margin-bottom: 20px;
         }
 
         .track-btn {
-            padding: 20px;
+            padding: 18px;
             border: none;
             border-radius: 12px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             color: white;
+            text-align: left;
             position: relative;
-            overflow: hidden;
         }
 
-        .track-btn:before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
+        .track-btn .icon {
+            margin-right: 8px;
         }
 
-        .track-btn:active:before {
-            width: 300px;
-            height: 300px;
+        .track-btn .time {
+            display: block;
+            font-size: 12px;
+            margin-top: 5px;
+            opacity: 0.9;
         }
 
         .track-btn.home-departure {
@@ -248,105 +242,128 @@
             color: white;
         }
 
-        .track-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .track-btn.hidden {
+            display: none;
         }
 
-        .track-btn .time {
-            display: block;
-            font-size: 12px;
-            margin-top: 5px;
-            opacity: 0.9;
+        /* Modal/Dialog */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
 
-        /* Work Mode Selector */
-        .work-mode-section {
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-body {
             margin-bottom: 20px;
         }
 
-        .work-mode-label {
-            display: block;
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 8px;
-            font-weight: 500;
+        .modal-buttons {
+            display: grid;
+            gap: 10px;
         }
 
-        .work-mode-selector {
-            position: relative;
-        }
-
-        select {
-            width: 100%;
-            padding: 12px 40px 12px 12px;
-            border: 2px solid #ddd;
+        .modal-btn {
+            padding: 12px;
+            border: none;
             border-radius: 8px;
             font-size: 14px;
-            background: white;
+            font-weight: 600;
             cursor: pointer;
-            appearance: none;
             transition: all 0.3s;
         }
 
-        select:focus {
-            outline: none;
-            border-color: #667eea;
+        .modal-btn-primary {
+            background: #667eea;
+            color: white;
         }
 
-        .work-mode-selector::after {
-            content: '▼';
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-            color: #666;
-            font-size: 12px;
+        .modal-btn-primary:hover {
+            background: #5568d3;
         }
 
-        .mode-indicator {
-            display: inline-flex;
-            align-items: center;
+        .modal-btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .modal-btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .modal-btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        /* Theme suggestions */
+        .theme-suggestions {
+            display: flex;
+            flex-wrap: wrap;
             gap: 8px;
-            padding: 8px 16px;
-            background: #f0f4ff;
-            border-radius: 20px;
-            font-size: 13px;
-            color: #667eea;
-            font-weight: 500;
             margin-top: 10px;
         }
 
-        .mode-indicator.urlaub {
-            background: #fff3e0;
-            color: #f57c00;
-        }
-
-        .mode-indicator.krank {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .mode-indicator.homeoffice {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .mode-indicator.stempeln {
+        .theme-chip {
             background: #e3f2fd;
             color: #1976d2;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #1976d2;
         }
 
-        .settings-btn {
-            background: #f5f5f5;
-            color: #666;
-            padding: 12px;
-            font-size: 14px;
+        .theme-chip:hover {
+            background: #1976d2;
+            color: white;
         }
 
-        .settings-btn:hover {
-            background: #e0e0e0;
+        /* Missing days list */
+        .missing-day-item {
+            background: #fff3e0;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 3px solid #f57c00;
+        }
+
+        .missing-day-date {
+            font-weight: 600;
+            color: #e65100;
         }
 
         /* Toast Notifications */
@@ -362,7 +379,8 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             opacity: 0;
             transition: opacity 0.3s;
-            z-index: 1000;
+            z-index: 2000;
+            max-width: 90%;
         }
 
         .toast.show {
@@ -377,6 +395,138 @@
             background: #f44336;
         }
 
+        .toast.warning {
+            background: #ff9800;
+        }
+
+        /* Absence Mode Styling */
+        .absence-mode {
+            background: #fff3e0;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .absence-mode.urlaub {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .absence-mode.krank {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .absence-mode.abwesend {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .absence-mode.feiertag {
+            background: #fff9c4;
+            color: #f57f17;
+        }
+
+        .absence-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .absence-text {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .absence-menu-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: inherit;
+            padding: 4px 6px;
+            border-radius: 6px;
+        }
+
+        .absence-menu-btn:hover {
+            background: rgba(0,0,0,0.08);
+        }
+
+        .absence-menu {
+            margin-top: 12px;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .absence-menu .form-group {
+            margin-bottom: 12px;
+        }
+
+        .absence-options {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            font-size: 13px;
+        }
+
+        .absence-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .absence-actions button {
+            flex: 1;
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+
+        /* Info Bar für HomeOffice/Stempeln */
+        .info-bar {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 4px solid #4caf50;
+        }
+
+        .info-bar.homeoffice {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left-color: #4caf50;
+        }
+
+        .info-bar.stempeln {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left-color: #2196F3;
+        }
+
+        .info-bar.hidden {
+            display: none;
+        }
+
+        /* Settings Button */
+        .settings-btn {
+            background: #f5f5f5;
+            color: #666;
+            padding: 12px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        /* Loading Spinner */
         .loading {
             display: inline-block;
             width: 16px;
@@ -392,20 +542,20 @@
             to { transform: rotate(360deg); }
         }
 
-        .export-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-        }
-
-        .btn-export {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            color: white;
-        }
-
-        .btn-export:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(17, 153, 142, 0.3);
+        /* Responsive */
+        @media (max-width: 480px) {
+            .container {
+                padding: 0;
+            }
+            
+            .card {
+                padding: 20px;
+                border-radius: 16px;
+            }
+            
+            h1 {
+                font-size: 22px;
+            }
         }
     </style>
 </head>
@@ -417,32 +567,18 @@
             <p class="subtitle">Verbinde die App mit Google Sheets</p>
 
             <div class="info-box">
-                <strong>📋 Vorbereitung (einmalig):</strong>
-                <ol>
-                    <li>Öffne dein Google Sheet für die Zeiterfassung</li>
-                    <li>Menü: Erweiterungen → Apps Script</li>
-                    <li>Lösche den vorhandenen Code</li>
-                    <li>Kopiere den Code aus der Datei "Code.gs" (wurde bereitgestellt)</li>
-                    <li>Füge den Code ein und speichere (Disketten-Symbol)</li>
-                    <li>Klicke "Bereitstellen" → "Neue Bereitstellung"</li>
-                    <li>Typ auswählen: "Web-App"</li>
-                    <li>Ausführen als: "Ich"</li>
-                    <li>Zugriff: "Jeder"</li>
-                    <li>Klicke "Bereitstellen" und kopiere die Web-App-URL</li>
-                </ol>
+                <strong>📋 Schnellstart:</strong><br>
+                1. Google Sheet erstellen<br>
+                2. Apps Script Code einfügen (Code.gs)<br>
+                3. Deployen und URL kopieren<br>
+                4. URL hier eingeben
             </div>
 
             <form id="setupForm">
                 <div class="form-group">
-                    <label for="appsScriptUrl">Google Apps Script Web-App-URL *</label>
-                    <input type="text" id="appsScriptUrl" placeholder="https://script.google.com/macros/s/..." required>
-                    <div class="hint">Die URL erhältst du nach dem Deployment des Apps Scripts</div>
-                </div>
-
-                <div class="form-group">
-                    <label for="sheetName">Tabellenblatt-Name (optional)</label>
-                    <input type="text" id="sheetName" placeholder="Zeiterfassung" value="Zeiterfassung">
-                    <div class="hint">Name des Blattes in deinem Spreadsheet</div>
+                    <label for="appsScriptUrl">Google Apps Script URL *</label>
+                    <input type="text" id="appsScriptUrl" placeholder="https://script.google.com/macros/s/.../exec" required>
+                    <div class="hint">Die URL nach dem Deployment</div>
                 </div>
 
                 <button type="submit" class="btn-primary">
@@ -453,7 +589,7 @@
 
         <!-- Main App Screen -->
         <div class="card main-screen" id="mainScreen">
-            <h1>⏱️ Arbeitszeit Tracker</h1>
+            <h1>⏱️ Zeiterfassung</h1>
             <p class="subtitle">Erfasse deine täglichen Zeiten</p>
 
             <div class="status-display">
@@ -462,49 +598,186 @@
             </div>
 
             <div class="work-mode-section">
-                <label class="work-mode-label" for="workMode">📋 Arbeitsmodus</label>
-                <div class="work-mode-selector">
+                <label for="workMode">📋 Arbeitsmodus</label>
+                <div class="mode-selector">
                     <select id="workMode">
-                        <option value="normal">Normal (Pendeln ins Büro)</option>
-                        <option value="homeoffice">🏠 HomeOffice</option>
-                        <option value="stempeln">🏢 Stempeln (nur Büro)</option>
-                        <option value="urlaub">🏖️ Urlaub</option>
-                        <option value="krank">🤒 Krank</option>
+                        <option value="Pendeln">🚗 Pendeln (Normal)</option>
+                        <option value="HomeOffice">🏠 HomeOffice</option>
+                        <option value="Stempeln">🏢 Stempeln (nur Büro)</option>
+                        <option value="Urlaub">🏖️ Urlaub</option>
+                        <option value="Krank">🤒 Krank</option>
+                        <option value="Feiertag">🎉 Feiertag</option>
+                        <option value="Abwesend">📅 Abwesend</option>
                     </select>
                 </div>
             </div>
 
-            <div class="tracking-buttons">
+            <!-- Absence Mode Display (nur bei Urlaub/Krank/Abwesend) -->
+            <div class="absence-mode hidden" id="absenceMode">
+                <button class="absence-menu-btn" id="absenceMenuToggle" title="Abwesenheit-Optionen">⋮</button>
+                <div class="absence-icon" id="absenceIcon">🏖️</div>
+                <div class="absence-text" id="absenceText">Heute: Urlaub</div>
+                <p style="margin-top: 10px; font-size: 13px;">Keine Zeiterfassung nötig</p>
+                
+                <div class="absence-menu hidden" id="absenceMenu">
+                    <div class="form-group">
+                        <label>Tag-Anteil:</label>
+                        <div class="absence-options">
+                            <label><input type="radio" name="absencePart" value="full" checked> Ganzer Tag</label>
+                            <label><input type="radio" name="absencePart" value="half"> Halber Tag</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group hidden" id="absenceDescriptionGroup">
+                        <label for="absenceDescription">Beschreibung (nur Sonstige Abwesenheit):</label>
+                        <textarea id="absenceDescription" placeholder="Kurze Beschreibung..."></textarea>
+                    </div>
+                    
+                    <div class="absence-actions">
+                        <button class="modal-btn modal-btn-primary" id="absenceSave">Speichern</button>
+                        <button class="modal-btn modal-btn-secondary" id="absenceClose">Schließen</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Bar für HomeOffice/Stempeln -->
+            <div class="info-bar hidden" id="infoBar">
+                <span id="infoBarText">🏠 HomeOffice-Modus</span>
+            </div>
+
+            <!-- Tracking Buttons -->
+            <div class="tracking-buttons" id="trackingButtons">
                 <button class="track-btn home-departure" data-type="home-departure">
-                    🏠 → 🚗 Losfahrt von Zuhause
+                    <span class="icon">🏠→🚗</span> Losfahrt von Zuhause
                     <span class="time" id="time-home-departure"></span>
                 </button>
 
                 <button class="track-btn work-arrival" data-type="work-arrival">
-                    🚗 → 🏢 Ankunft auf der Arbeit
+                    <span class="icon">🚗→🏢</span> Ankunft auf der Arbeit
                     <span class="time" id="time-work-arrival"></span>
                 </button>
 
                 <button class="track-btn work-departure" data-type="work-departure">
-                    🏢 → 🚗 Losfahrt von der Arbeit
+                    <span class="icon">🏢→🚗</span> Losfahrt von der Arbeit
                     <span class="time" id="time-work-departure"></span>
                 </button>
 
                 <button class="track-btn home-arrival" data-type="home-arrival">
-                    🚗 → 🏠 Ankunft Zuhause
+                    <span class="icon">🚗→🏠</span> Ankunft Zuhause
                     <span class="time" id="time-home-arrival"></span>
                 </button>
             </div>
 
-            <div class="export-section">
-                <button class="btn-export" id="exportBtn">
-                    📊 Daten als CSV exportieren
+            <button class="btn-secondary settings-btn" id="settingsBtn">
+                ⚙️ Einstellungen
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-title" id="confirmTitle">Zeit bereits erfasst</div>
+            <div class="modal-body" id="confirmBody">
+                <p><strong id="confirmExistingTime"></strong></p>
+                <p style="margin-top: 10px;">Was möchtest du tun?</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" id="confirmUseNew">
+                    🕐 Aktuelle Zeit übernehmen
+                </button>
+                <button class="modal-btn modal-btn-secondary hidden" id="confirmEditTheme">
+                    📝 Thema/Projekt ändern
+                </button>
+                <button class="modal-btn modal-btn-secondary" id="confirmEdit">
+                    ✏️ Zeit manuell korrigieren
+                </button>
+                <button class="modal-btn modal-btn-secondary" id="confirmCancel">
+                    ❌ Abbrechen
                 </button>
             </div>
+        </div>
+    </div>
 
-            <button class="btn-secondary settings-btn" id="settingsBtn">
-                ⚙️ Einstellungen ändern
-            </button>
+    <!-- Edit Time Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-title">⏰ Zeit bearbeiten</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editTimeInput">Neue Zeit eingeben:</label>
+                    <input type="time" id="editTimeInput" required>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" id="editConfirm">
+                    ✓ Speichern
+                </button>
+                <button class="modal-btn modal-btn-secondary" id="editCancel">
+                    Abbrechen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme/Project Modal -->
+    <div class="modal" id="themeModal">
+        <div class="modal-content">
+            <div class="modal-title">📋 Tagesrückblick</div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px; color: #666;">Woran hast du heute gearbeitet?</p>
+                
+                <div class="form-group">
+                    <label for="themeInput">Thema / Projekt:</label>
+                    <input type="text" id="themeInput" placeholder="z.B. Projekt ABC" list="themeSuggestions">
+                    <datalist id="themeSuggestions"></datalist>
+                    <div class="theme-suggestions" id="themeChips"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="descriptionInput">Beschreibung (optional):</label>
+                    <textarea id="descriptionInput" placeholder="Kurze Beschreibung der Tätigkeit..."></textarea>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" id="themeConfirm">
+                    ✓ Speichern & Fortfahren
+                </button>
+                <button class="modal-btn modal-btn-secondary" id="themeSkip">
+                    Überspringen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Missing Days Modal -->
+    <div class="modal" id="missingDaysModal">
+        <div class="modal-content">
+            <div class="modal-title">📅 Fehlende Einträge</div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px; color: #666;">
+                    Es fehlen Einträge für folgende Tage:
+                </p>
+                <div id="missingDaysList" style="margin-bottom: 20px;"></div>
+                <div class="form-group">
+                    <label for="missingDayMode">Was war an diesem Tag?</label>
+                    <select id="missingDayMode">
+                        <option value="vergessen">❌ Vergessen (später nachtragen)</option>
+                        <option value="Urlaub">🏖️ Urlaub</option>
+                        <option value="Krank">🤒 Krank</option>
+                        <option value="Feiertag">🎉 Feiertag</option>
+                        <option value="Abwesend">📅 Sonstige Abwesenheit</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" id="missingDaysApply">
+                    ✓ Für alle anwenden
+                </button>
+                <button class="modal-btn modal-btn-secondary" id="missingDaysSkip">
+                    Später
+                </button>
+            </div>
         </div>
     </div>
 
@@ -514,19 +787,35 @@
     <script>
         // Configuration
         let config = {
-            appsScriptUrl: '',
-            sheetName: 'Zeiterfassung'
+            appsScriptUrl: ''
         };
 
         // Today's tracking data
         let todayData = {
             date: '',
-            workMode: 'normal',
+            workMode: 'Pendeln',
+            pendelArt: '',
             'home-departure': '',
             'work-arrival': '',
             'work-departure': '',
-            'home-arrival': ''
+            'home-arrival': '',
+            theme: '',
+            description: '',
+            absencePart: 'full'
         };
+
+        // Available themes (loaded from backend)
+        let availableThemes = [];
+
+        // Current action context
+        let currentAction = {
+            type: null,
+            newTime: null,
+            themeOnly: false
+        };
+
+        // Missing days context
+        let missingDays = [];
 
         // Initialize app
         function init() {
@@ -537,6 +826,7 @@
             if (config.appsScriptUrl) {
                 showMainScreen();
                 loadTodayData();
+                loadThemes();
             } else {
                 showSetupScreen();
             }
@@ -544,12 +834,33 @@
             // Event listeners
             document.getElementById('setupForm').addEventListener('submit', handleSetup);
             document.getElementById('settingsBtn').addEventListener('click', showSetupScreen);
-            document.getElementById('exportBtn').addEventListener('click', exportToCSV);
             document.getElementById('workMode').addEventListener('change', handleWorkModeChange);
+            document.getElementById('absenceMenuToggle').addEventListener('click', toggleAbsenceMenu);
+            document.getElementById('absenceSave').addEventListener('click', handleAbsenceSave);
+            document.getElementById('absenceClose').addEventListener('click', () => toggleAbsenceMenu(false));
             
+            // Tracking buttons
             document.querySelectorAll('.track-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => handleTrack(e.target.closest('.track-btn')));
+                btn.addEventListener('click', (e) => handleTrackClick(e.target.closest('.track-btn')));
             });
+
+            // Confirmation modal buttons
+            document.getElementById('confirmUseNew').addEventListener('click', handleConfirmUseNew);
+            document.getElementById('confirmEdit').addEventListener('click', handleConfirmEdit);
+            document.getElementById('confirmEditTheme').addEventListener('click', handleConfirmEditTheme);
+            document.getElementById('confirmCancel').addEventListener('click', () => closeModal('confirmModal'));
+
+            // Edit modal buttons
+            document.getElementById('editConfirm').addEventListener('click', handleEditConfirm);
+            document.getElementById('editCancel').addEventListener('click', () => closeModal('editModal'));
+
+            // Theme modal buttons
+            document.getElementById('themeConfirm').addEventListener('click', handleThemeConfirm);
+            document.getElementById('themeSkip').addEventListener('click', handleThemeSkip);
+
+            // Missing days modal buttons
+            document.getElementById('missingDaysApply').addEventListener('click', handleMissingDaysApply);
+            document.getElementById('missingDaysSkip').addEventListener('click', () => closeModal('missingDaysModal'));
         }
 
         // Load configuration from localStorage
@@ -563,105 +874,6 @@
         // Save configuration to localStorage
         function saveConfig() {
             localStorage.setItem('timetracker-config', JSON.stringify(config));
-        }
-
-        // Handle work mode change
-        function handleWorkModeChange(e) {
-            todayData.workMode = e.target.value;
-            updateButtonVisibility();
-            saveToGoogleSheets();
-            
-            const modeNames = {
-                'normal': 'Normal (Pendeln)',
-                'homeoffice': 'HomeOffice',
-                'stempeln': 'Stempeln (Büro)',
-                'urlaub': 'Urlaub',
-                'krank': 'Krank'
-            };
-            
-            showToast(`📋 Modus geändert: ${modeNames[e.target.value]}`, 'success');
-        }
-
-        // Update button visibility based on work mode
-        function updateButtonVisibility() {
-            const mode = todayData.workMode;
-            const buttons = {
-                'home-departure': document.querySelector('[data-type="home-departure"]'),
-                'work-arrival': document.querySelector('[data-type="work-arrival"]'),
-                'work-departure': document.querySelector('[data-type="work-departure"]'),
-                'home-arrival': document.querySelector('[data-type="home-arrival"]')
-            };
-
-            // Reset all buttons
-            Object.values(buttons).forEach(btn => {
-                btn.style.display = 'block';
-            });
-
-            // Adjust based on mode
-            if (mode === 'homeoffice') {
-                // HomeOffice: nur Arbeitsbeginn und -ende
-                buttons['home-departure'].style.display = 'none';
-                buttons['home-arrival'].style.display = 'none';
-                buttons['work-arrival'].innerHTML = '💼 Arbeitsbeginn (HomeOffice)<span class="time" id="time-work-arrival"></span>';
-                buttons['work-departure'].innerHTML = '🏁 Arbeitsende (HomeOffice)<span class="time" id="time-work-departure"></span>';
-            } else if (mode === 'stempeln') {
-                // Stempeln: nur Ankunft und Losfahrt von Arbeit
-                buttons['home-departure'].style.display = 'none';
-                buttons['home-arrival'].style.display = 'none';
-                buttons['work-arrival'].innerHTML = '🏢 Ankunft Büro (Stempeln)<span class="time" id="time-work-arrival"></span>';
-                buttons['work-departure'].innerHTML = '🏢 Verlassen Büro (Stempeln)<span class="time" id="time-work-departure"></span>';
-            } else if (mode === 'urlaub' || mode === 'krank') {
-                // Urlaub/Krank: keine Buttons nötig
-                Object.values(buttons).forEach(btn => {
-                    btn.style.display = 'none';
-                });
-            } else {
-                // Normal mode: restore original labels
-                buttons['home-departure'].innerHTML = '🏠 → 🚗 Losfahrt von Zuhause<span class="time" id="time-home-departure"></span>';
-                buttons['work-arrival'].innerHTML = '🚗 → 🏢 Ankunft auf der Arbeit<span class="time" id="time-work-arrival"></span>';
-                buttons['work-departure'].innerHTML = '🏢 → 🚗 Losfahrt von der Arbeit<span class="time" id="time-work-departure"></span>';
-                buttons['home-arrival'].innerHTML = '🚗 → 🏠 Ankunft Zuhause<span class="time" id="time-home-arrival"></span>';
-            }
-
-            updateButtonStates();
-        }
-
-        // Update button states (primary/secondary/completed)
-        function updateButtonStates() {
-            const mode = todayData.workMode;
-            
-            // Don't update buttons for urlaub/krank
-            if (mode === 'urlaub' || mode === 'krank') {
-                return;
-            }
-
-            const buttons = document.querySelectorAll('.track-btn');
-            let visibleButtons = Array.from(buttons).filter(btn => btn.style.display !== 'none');
-            
-            // Find next button to highlight
-            let nextButtonIndex = -1;
-            
-            for (let i = 0; i < visibleButtons.length; i++) {
-                const btn = visibleButtons[i];
-                const type = btn.dataset.type;
-                
-                if (todayData[type]) {
-                    // Button has time - mark as completed
-                    btn.classList.remove('secondary');
-                    btn.classList.add('completed');
-                } else {
-                    // Button doesn't have time yet
-                    if (nextButtonIndex === -1) {
-                        // This is the next button to be clicked - primary color
-                        nextButtonIndex = i;
-                        btn.classList.remove('secondary', 'completed');
-                    } else {
-                        // Future buttons - secondary color
-                        btn.classList.remove('completed');
-                        btn.classList.add('secondary');
-                    }
-                }
-            }
         }
 
         // Update date and time display
@@ -680,10 +892,7 @@
         function showSetupScreen() {
             document.getElementById('setupScreen').classList.add('active');
             document.getElementById('mainScreen').classList.remove('active');
-            
-            // Pre-fill form
             document.getElementById('appsScriptUrl').value = config.appsScriptUrl || '';
-            document.getElementById('sheetName').value = config.sheetName || 'Zeiterfassung';
         }
 
         // Show main screen
@@ -696,62 +905,48 @@
         async function handleSetup(e) {
             e.preventDefault();
             
-            const appsScriptUrl = document.getElementById('appsScriptUrl').value.trim();
-            const sheetName = document.getElementById('sheetName').value.trim() || 'Zeiterfassung';
-
-            // Test connection
+            const url = document.getElementById('appsScriptUrl').value.trim();
             showToast('Verbindung wird getestet...', 'info');
             
             try {
-                const testResult = await testAppsScriptConnection(appsScriptUrl);
+                const testResult = await testConnection(url);
                 
                 if (testResult.success) {
-                    config.appsScriptUrl = appsScriptUrl;
-                    config.sheetName = sheetName;
+                    config.appsScriptUrl = url;
                     saveConfig();
                     
                     showToast('✅ Verbindung erfolgreich!', 'success');
                     setTimeout(() => {
                         showMainScreen();
                         loadTodayData();
+                        loadThemes();
                     }, 1500);
                 } else {
-                    showToast('❌ Verbindung fehlgeschlagen: ' + testResult.error, 'error');
+                    showToast('❌ Fehler: ' + testResult.error, 'error');
                 }
             } catch (error) {
                 showToast('❌ Fehler: ' + error.message, 'error');
             }
         }
 
-        // Test Apps Script connection
-        async function testAppsScriptConnection(url) {
+        // Test connection to Apps Script
+        async function testConnection(url) {
             try {
                 const testUrl = `${url}?action=test`;
                 const response = await fetch(testUrl);
                 
                 if (!response.ok) {
-                    return { 
-                        success: false, 
-                        error: 'HTTP-Fehler: ' + response.status 
-                    };
+                    return { success: false, error: 'HTTP ' + response.status };
                 }
                 
                 const data = await response.json();
-                
-                if (data.success) {
-                    return { success: true };
-                } else {
-                    return { 
-                        success: false, 
-                        error: data.error || 'Unbekannter Fehler' 
-                    };
-                }
+                return data.success ? { success: true } : { success: false, error: data.error };
             } catch (error) {
                 return { success: false, error: error.message };
             }
         }
 
-        // Load today's data from Google Sheets via Apps Script
+        // Load today's data
         async function loadTodayData() {
             try {
                 const today = new Date().toLocaleDateString('de-DE');
@@ -760,239 +955,726 @@
                 const url = `${config.appsScriptUrl}?action=getToday&date=${encodeURIComponent(today)}`;
                 const response = await fetch(url);
                 
-                if (!response.ok) {
-                    console.error('Failed to load data');
-                    return;
-                }
+                if (!response.ok) return;
                 
                 const result = await response.json();
                 
                 if (result.success && result.data) {
-                    todayData.workMode = result.data.workMode || 'normal';
-                    todayData['home-departure'] = result.data['home-departure'] || '';
-                    todayData['work-arrival'] = result.data['work-arrival'] || '';
-                    todayData['work-departure'] = result.data['work-departure'] || '';
-                    todayData['home-arrival'] = result.data['home-arrival'] || '';
-                    
-                    // Update dropdown
-                    document.getElementById('workMode').value = todayData.workMode;
-                    
-                    updateButtonVisibility();
+                    Object.assign(todayData, result.data);
+                    document.getElementById('workMode').value = todayData.workMode || 'Pendeln';
                     updateUI();
                 }
+                
+                updateButtonVisibility();
+                
+                // Check for missing days (gaps in tracking)
+                await checkForMissingDays();
             } catch (error) {
-                console.error('Error loading today data:', error);
+                console.error('Error loading data:', error);
             }
         }
 
-        // Handle tracking button click
-        async function handleTrack(btn) {
-            const type = btn.dataset.type;
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        // Check for missing days in tracking
+        async function checkForMissingDays() {
+            try {
+                const url = `${config.appsScriptUrl}?action=getAllData`;
+                const response = await fetch(url);
+                
+                if (!response.ok) return;
+                
+                const result = await response.json();
+                
+                if (!result.success || !result.data || result.data.length === 0) return;
+                
+                // Get last entry date
+                const lastEntry = result.data[result.data.length - 1];
+                const lastDate = parseGermanDate(lastEntry[0]); // Spalte 0 ist Datum
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                if (!lastDate) return;
+                
+                // Find missing workdays
+                const missingDays = [];
+                let currentDate = new Date(lastDate);
+                currentDate.setDate(currentDate.getDate() + 1);
+                
+                while (currentDate < today) {
+                    const dayOfWeek = currentDate.getDay();
+                    // Wochenende überspringen (0 = Sonntag, 6 = Samstag)
+                    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                        const dateStr = currentDate.toLocaleDateString('de-DE');
+                        // Prüfen ob Tag nicht bereits eingetragen wurde
+                        const exists = result.data.some(row => row[0] === dateStr);
+                        if (!exists) {
+                            missingDays.push(new Date(currentDate));
+                        }
+                    }
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                
+                // Show modal if there are missing days
+                if (missingDays.length > 0) {
+                    showMissingDaysModal(missingDays);
+                }
+            } catch (error) {
+                console.error('Error checking missing days:', error);
+            }
+        }
+
+        // Parse German date format (dd.mm.yyyy)
+        function parseGermanDate(dateStr) {
+            if (!dateStr) return null;
+            const parts = dateStr.split('.');
+            if (parts.length !== 3) return null;
             
-            todayData[type] = timeStr;
-            updateUI();
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; // Monat ist 0-basiert
+            const year = parseInt(parts[2], 10);
+            
+            return new Date(year, month, day);
+        }
+
+        // Load available themes
+        async function loadThemes() {
+            try {
+                const url = `${config.appsScriptUrl}?action=getThemes`;
+                const response = await fetch(url);
+                
+                if (!response.ok) return;
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    availableThemes = result.data;
+                    updateThemeSuggestions();
+                }
+            } catch (error) {
+                console.error('Error loading themes:', error);
+            }
+        }
+
+        // Update theme suggestions in modal
+        function updateThemeSuggestions() {
+            const datalist = document.getElementById('themeSuggestions');
+            const chips = document.getElementById('themeChips');
+            
+            datalist.innerHTML = '';
+            chips.innerHTML = '';
+            
+            availableThemes.slice(0, 10).forEach(theme => {
+                // Datalist option
+                const option = document.createElement('option');
+                option.value = theme.name;
+                datalist.appendChild(option);
+                
+                // Chip
+                const chip = document.createElement('div');
+                chip.className = 'theme-chip';
+                chip.textContent = theme.name;
+                chip.onclick = () => {
+                    document.getElementById('themeInput').value = theme.name;
+                };
+                chips.appendChild(chip);
+            });
+        }
+
+        // Handle work mode change
+        async function handleWorkModeChange(e) {
+            const mode = e.target.value;
+            todayData.workMode = mode;
+            
+            updateButtonVisibility();
+            await saveData('workMode', mode);
+            
+            showToast(`Modus geändert: ${mode}`, 'success');
+        }
+
+        // Update button visibility based on work mode
+        function updateButtonVisibility() {
+            const mode = todayData.workMode;
+            const buttons = document.querySelectorAll('.track-btn');
+            const absenceDiv = document.getElementById('absenceMode');
+            const infoBar = document.getElementById('infoBar');
+            const infoBarText = document.getElementById('infoBarText');
+            const trackingDiv = document.getElementById('trackingButtons');
+            const absenceIcon = document.getElementById('absenceIcon');
+            const absenceText = document.getElementById('absenceText');
+            const absenceDescriptionGroup = document.getElementById('absenceDescriptionGroup');
+            
+            // Reset everything
+            buttons.forEach(btn => btn.classList.remove('hidden'));
+            absenceDiv.classList.add('hidden');
+            infoBar.classList.add('hidden');
+            trackingDiv.classList.remove('hidden');
+            
+            // MODUS 1: ABWESENHEIT (Urlaub/Krank/Abwesend/Feiertag)
+            if (mode === 'Urlaub' || mode === 'Krank' || mode === 'Abwesend' || mode === 'Feiertag') {
+                // Verstecke ALLE Tracking-Buttons
+                trackingDiv.classList.add('hidden');
+                
+                // Zeige NUR die große Abwesenheits-Fläche
+                absenceDiv.classList.remove('hidden');
+                absenceDiv.className = `absence-mode ${mode.toLowerCase()}`;
+                
+                const icons = { 
+                    'Urlaub': '🏖️', 
+                    'Krank': '🤒', 
+                    'Abwesend': '📅',
+                    'Feiertag': '🎉'
+                };
+                absenceIcon.textContent = icons[mode] || '📅';
+                absenceText.textContent = `Heute: ${mode}`;
+                
+                // Show description only for "Abwesend"
+                if (mode === 'Abwesend') {
+                    absenceDescriptionGroup.classList.remove('hidden');
+                } else {
+                    absenceDescriptionGroup.classList.add('hidden');
+                }
+                
+                // Initialize absence menu state from description
+                syncAbsenceMenuFromDescription();
+                
+                return; // Wichtig: Funktion hier beenden!
+            }
+            
+            // MODUS 2: ARBEIT (Pendeln/HomeOffice/Stempeln)
+            // Abwesenheits-Fläche bleibt versteckt (wurde oben schon auf hidden gesetzt)
+            
+            if (mode === 'HomeOffice') {
+                // Zeige schmale Info-Bar
+                infoBar.classList.remove('hidden');
+                infoBar.className = 'info-bar homeoffice';
+                infoBarText.textContent = '🏠 HomeOffice-Modus: Nur Arbeitszeiten';
+                
+                // Verstecke Pendel-Buttons
+                document.querySelector('[data-type="home-departure"]').classList.add('hidden');
+                document.querySelector('[data-type="home-arrival"]').classList.add('hidden');
+                
+                // Update labels
+                const arrivalBtn = document.querySelector('[data-type="work-arrival"]');
+                const departureBtn = document.querySelector('[data-type="work-departure"]');
+                arrivalBtn.innerHTML = '<span class="icon">💼</span> Arbeitsbeginn<span class="time" id="time-work-arrival"></span>';
+                departureBtn.innerHTML = '<span class="icon">🏁</span> Arbeitsende<span class="time" id="time-work-departure"></span>';
+                
+            } else if (mode === 'Stempeln') {
+                // Zeige schmale Info-Bar
+                infoBar.classList.remove('hidden');
+                infoBar.className = 'info-bar stempeln';
+                infoBarText.textContent = '🏢 Stempeln-Modus: Nur Bürozeiten';
+                
+                // Verstecke Pendel-Buttons
+                document.querySelector('[data-type="home-departure"]').classList.add('hidden');
+                document.querySelector('[data-type="home-arrival"]').classList.add('hidden');
+                
+                // Update labels
+                const arrivalBtn = document.querySelector('[data-type="work-arrival"]');
+                const departureBtn = document.querySelector('[data-type="work-departure"]');
+                arrivalBtn.innerHTML = '<span class="icon">🏢</span> Ankunft Büro<span class="time" id="time-work-arrival"></span>';
+                departureBtn.innerHTML = '<span class="icon">🏢</span> Verlassen Büro<span class="time" id="time-work-departure"></span>';
+                
+            } else {
+                // Pendeln mode - restore original labels, keine Info-Bar
+                const buttonLabels = {
+                    'home-departure': '<span class="icon">🏠→🚗</span> Losfahrt von Zuhause<span class="time" id="time-home-departure"></span>',
+                    'work-arrival': '<span class="icon">🚗→🏢</span> Ankunft auf der Arbeit<span class="time" id="time-work-arrival"></span>',
+                    'work-departure': '<span class="icon">🏢→🚗</span> Losfahrt von der Arbeit<span class="time" id="time-work-departure"></span>',
+                    'home-arrival': '<span class="icon">🚗→🏠</span> Ankunft Zuhause<span class="time" id="time-home-arrival"></span>'
+                };
+                
+                Object.entries(buttonLabels).forEach(([type, html]) => {
+                    document.querySelector(`[data-type="${type}"]`).innerHTML = html;
+                });
+            }
+            
             updateButtonStates();
+        }
+
+        const HALF_DAY_PREFIX = '1/2 Tag';
+
+        function parseAbsenceDescription(desc) {
+            const raw = (desc || '').trim();
+            if (!raw) return { part: 'full', note: '' };
             
-            // Save to Google Sheets
-            await saveToGoogleSheets();
+            const lower = raw.toLowerCase();
+            const prefixLower = HALF_DAY_PREFIX.toLowerCase();
+            if (lower.startsWith(prefixLower)) {
+                let note = raw.slice(HALF_DAY_PREFIX.length).trim();
+                if (note.startsWith('-')) note = note.slice(1).trim();
+                return { part: 'half', note: note };
+            }
             
-            showToast(`✅ ${btn.textContent.split('\n')[0]} um ${timeStr} erfasst`, 'success');
+            return { part: 'full', note: raw };
+        }
+
+        function buildAbsenceDescription(part, note) {
+            const trimmed = (note || '').trim();
+            if (part === 'half') {
+                return trimmed ? `${HALF_DAY_PREFIX} - ${trimmed}` : HALF_DAY_PREFIX;
+            }
+            return trimmed;
+        }
+
+        function syncAbsenceMenuFromDescription() {
+            const { part, note } = parseAbsenceDescription(todayData.description || '');
+            todayData.absencePart = part;
+            
+            const radios = document.querySelectorAll('input[name="absencePart"]');
+            radios.forEach(r => {
+                r.checked = r.value === part;
+            });
+            
+            const descEl = document.getElementById('absenceDescription');
+            if (descEl) descEl.value = note || '';
+            
+            updateAbsenceHeader();
+        }
+
+        function updateAbsenceHeader() {
+            const absenceText = document.getElementById('absenceText');
+            const mode = todayData.workMode;
+            const suffix = todayData.absencePart === 'half' ? ' (1/2 Tag)' : '';
+            absenceText.textContent = `Heute: ${mode}${suffix}`;
+        }
+
+        function toggleAbsenceMenu(forceState) {
+            const menu = document.getElementById('absenceMenu');
+            if (!menu) return;
+            
+            const shouldOpen = typeof forceState === 'boolean' ? forceState : menu.classList.contains('hidden');
+            if (shouldOpen) {
+                menu.classList.remove('hidden');
+            } else {
+                menu.classList.add('hidden');
+            }
+        }
+
+        async function handleAbsenceSave() {
+            const mode = todayData.workMode;
+            const selected = document.querySelector('input[name="absencePart"]:checked');
+            const part = selected ? selected.value : 'full';
+            const note = mode === 'Abwesend'
+                ? (document.getElementById('absenceDescription').value || '').trim()
+                : '';
+            
+            todayData.absencePart = part;
+            todayData.description = buildAbsenceDescription(part, note);
+            
+            updateAbsenceHeader();
+            toggleAbsenceMenu(false);
+            
+            await saveMeta('', todayData.description);
+            showToast('✅ Abwesenheit gespeichert', 'success');
+        }
+
+        // Update button states (primary/secondary/completed)
+        function updateButtonStates() {
+            const buttons = Array.from(document.querySelectorAll('.track-btn')).filter(btn => 
+                !btn.classList.contains('hidden')
+            );
+            
+            let nextIndex = -1;
+            
+            buttons.forEach((btn, index) => {
+                const type = btn.dataset.type;
+                
+                if (todayData[type]) {
+                    btn.classList.remove('secondary');
+                    btn.classList.add('completed');
+                } else {
+                    if (nextIndex === -1) {
+                        nextIndex = index;
+                        btn.classList.remove('secondary', 'completed');
+                    } else {
+                        btn.classList.remove('completed');
+                        btn.classList.add('secondary');
+                    }
+                }
+            });
         }
 
         // Update UI with current data
         function updateUI() {
-            Object.keys(todayData).forEach(key => {
-                if (key !== 'date' && key !== 'workMode') {
-                    const timeEl = document.getElementById(`time-${key}`);
-                    if (timeEl) {
-                        timeEl.textContent = todayData[key] ? `✓ ${todayData[key]}` : '';
-                    }
+            ['home-departure', 'work-arrival', 'work-departure', 'home-arrival'].forEach(type => {
+                const timeEl = document.getElementById(`time-${type}`);
+                if (timeEl && todayData[type]) {
+                    timeEl.textContent = `✓ ${todayData[type]}`;
+                } else if (timeEl) {
+                    timeEl.textContent = '';
                 }
             });
             
-            // Update status
-            const mode = todayData.workMode;
-            const modeEmojis = {
-                'normal': '🚗',
-                'homeoffice': '🏠',
-                'stempeln': '🏢',
-                'urlaub': '🏖️',
-                'krank': '🤒'
-            };
-            
-            if (mode === 'urlaub') {
-                document.getElementById('currentStatus').textContent = '🏖️ Heute: Urlaub';
-            } else if (mode === 'krank') {
-                document.getElementById('currentStatus').textContent = '🤒 Heute: Krank';
-            } else {
-                const lastTracked = Object.entries(todayData)
-                    .filter(([key, val]) => key !== 'date' && key !== 'workMode' && val)
-                    .pop();
-                
-                if (lastTracked) {
-                    const statusMap = {
-                        'home-departure': 'Unterwegs zur Arbeit',
-                        'work-arrival': mode === 'homeoffice' ? 'Arbeit begonnen (HomeOffice)' : mode === 'stempeln' ? 'Im Büro' : 'Auf der Arbeit',
-                        'work-departure': mode === 'homeoffice' ? 'Arbeit beendet (HomeOffice)' : mode === 'stempeln' ? 'Büro verlassen' : 'Auf dem Heimweg',
-                        'home-arrival': 'Zuhause angekommen'
-                    };
-                    document.getElementById('currentStatus').textContent = 
-                        `${modeEmojis[mode]} Status: ${statusMap[lastTracked[0]]} (${lastTracked[1]})`;
-                } else {
-                    const modeNames = {
-                        'normal': 'Normal (Pendeln)',
-                        'homeoffice': 'HomeOffice',
-                        'stempeln': 'Stempeln (Büro)'
-                    };
-                    document.getElementById('currentStatus').textContent = `Bereit zum Tracken - ${modeNames[mode]}`;
-                }
-            }
-            
             updateButtonStates();
+            updateStatus();
         }
 
-        // Save to Google Sheets via Apps Script (using GET to avoid CORS)
-        async function saveToGoogleSheets() {
-            try {
-                const today = todayData.date;
-                
-                // Translate work mode to German
-                const modeTranslation = {
-                    'normal': 'Normal',
-                    'homeoffice': 'HomeOffice',
-                    'stempeln': 'Stempeln',
-                    'urlaub': 'Urlaub',
-                    'krank': 'Krank'
+        // Update status display
+        function updateStatus() {
+            const mode = todayData.workMode;
+            
+            if (mode === 'Urlaub' || mode === 'Krank' || mode === 'Abwesend') {
+                document.getElementById('currentStatus').textContent = `Heute: ${mode}`;
+                return;
+            }
+            
+            const lastTracked = ['home-arrival', 'work-departure', 'work-arrival', 'home-departure']
+                .find(type => todayData[type]);
+            
+            if (lastTracked) {
+                const statusMap = {
+                    'home-departure': 'Unterwegs zur Arbeit',
+                    'work-arrival': mode === 'HomeOffice' ? 'Arbeit läuft' : 'Auf der Arbeit',
+                    'work-departure': mode === 'HomeOffice' ? 'Feierabend' : 'Auf dem Heimweg',
+                    'home-arrival': 'Zuhause angekommen'
                 };
-                
-                // Build URL with parameters (GET request to avoid CORS)
+                document.getElementById('currentStatus').textContent = 
+                    `Status: ${statusMap[lastTracked]} (${todayData[lastTracked]})`;
+            } else {
+                document.getElementById('currentStatus').textContent = 'Bereit zum Tracken';
+            }
+        }
+
+        // Handle track button click
+        async function handleTrackClick(btn) {
+            const type = btn.dataset.type;
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            
+            currentAction.type = type;
+            currentAction.newTime = timeStr;
+            currentAction.themeOnly = false;
+            
+            // FEATURE 1: Check if time already exists
+            if (todayData[type]) {
+                // Bei work-departure: Zeige auch Theme-Anpassung an
+                if (type === 'work-departure') {
+                    showConfirmModalWithTheme(type, todayData[type], timeStr);
+                } else {
+                    showConfirmModal(type, todayData[type], timeStr);
+                }
+                return;
+            }
+            
+            // FEATURE 3: Thema-Dialog bei work-departure (Losfahrt Arbeit / Verlassen Büro / Arbeitsende)
+            if (type === 'work-departure') {
+                showThemeModal();
+                return;
+            }
+            
+            // Save directly
+            await saveTimeEntry(type, timeStr);
+        }
+
+        // FEATURE 1: Show confirmation modal
+        function showConfirmModal(type, existingTime, newTime) {
+            const typeNames = {
+                'home-departure': 'Losfahrt von Zuhause',
+                'work-arrival': 'Ankunft auf der Arbeit',
+                'work-departure': 'Losfahrt von der Arbeit',
+                'home-arrival': 'Ankunft Zuhause'
+            };
+            
+            document.getElementById('confirmTitle').textContent = `${typeNames[type]} - Zeit bereits erfasst`;
+            document.getElementById('confirmExistingTime').textContent = 
+                `Bisherige Zeit: ${existingTime}\nNeue Zeit: ${newTime}`;
+            
+            document.getElementById('confirmEditTheme').classList.add('hidden');
+            
+            openModal('confirmModal');
+        }
+
+        // FEATURE 4: Show confirmation modal WITH theme editing option for work-departure
+        function showConfirmModalWithTheme(type, existingTime, newTime) {
+            const mode = todayData.workMode;
+            const buttonText = mode === 'HomeOffice' ? 'Arbeitsende' : 
+                               mode === 'Stempeln' ? 'Verlassen Büro' : 
+                               'Losfahrt von der Arbeit';
+            
+            document.getElementById('confirmTitle').textContent = `${buttonText} - Bereits erfasst`;
+            
+            let msg = `Bisherige Zeit: ${existingTime}\nNeue Zeit: ${newTime}`;
+            if (todayData.theme) {
+                msg += `\n\nAktuelles Thema: ${todayData.theme}`;
+            }
+            
+            document.getElementById('confirmExistingTime').textContent = msg;
+            document.getElementById('confirmEditTheme').classList.remove('hidden');
+            
+            openModal('confirmModal');
+        }
+
+        // Handle "Use new time" confirmation
+        async function handleConfirmUseNew() {
+            closeModal('confirmModal');
+            currentAction.themeOnly = false;
+            
+            if (currentAction.type === 'work-departure') {
+                showThemeModal();
+            } else {
+                await saveTimeEntry(currentAction.type, currentAction.newTime);
+            }
+        }
+
+        // Handle "Edit time" confirmation
+        function handleConfirmEdit() {
+            closeModal('confirmModal');
+            currentAction.themeOnly = false;
+            document.getElementById('editTimeInput').value = currentAction.newTime;
+            openModal('editModal');
+        }
+
+        // Handle "Edit theme only" confirmation (work-departure)
+        function handleConfirmEditTheme() {
+            closeModal('confirmModal');
+            currentAction.themeOnly = true;
+            currentAction.newTime = todayData[currentAction.type] || currentAction.newTime;
+            showThemeModal();
+        }
+
+        // Handle edit time confirmation
+        async function handleEditConfirm() {
+            const newTime = document.getElementById('editTimeInput').value;
+            
+            if (!newTime) {
+                showToast('Bitte Zeit eingeben', 'error');
+                return;
+            }
+            
+            closeModal('editModal');
+            currentAction.newTime = newTime;
+            
+            if (currentAction.type === 'work-departure') {
+                showThemeModal();
+            } else {
+                await saveTimeEntry(currentAction.type, newTime);
+            }
+        }
+
+        // FEATURE 2: Show theme modal
+        function showThemeModal() {
+            document.getElementById('themeInput').value = todayData.theme || '';
+            document.getElementById('descriptionInput').value = todayData.description || '';
+            openModal('themeModal');
+        }
+
+        // Handle theme confirmation
+        async function handleThemeConfirm() {
+            const theme = document.getElementById('themeInput').value.trim();
+            const description = document.getElementById('descriptionInput').value.trim();
+            
+            todayData.theme = theme;
+            todayData.description = description;
+            
+            closeModal('themeModal');
+            
+            if (currentAction.themeOnly) {
+                await saveMeta(theme, description);
+                showToast('✅ Thema/Beschreibung aktualisiert', 'success');
+                return;
+            }
+            
+            await saveTimeEntry(currentAction.type, currentAction.newTime, theme, description);
+            await saveMeta(theme, description);
+        }
+
+        // Handle theme skip
+        async function handleThemeSkip() {
+            closeModal('themeModal');
+            
+            if (currentAction.themeOnly) {
+                showToast('Thema unverändert', 'info');
+                return;
+            }
+            
+            await saveTimeEntry(currentAction.type, currentAction.newTime);
+        }
+
+        // Save time entry
+        async function saveTimeEntry(type, timeValue, theme = '', description = '') {
+            todayData[type] = timeValue;
+            
+            if (theme) todayData.theme = theme;
+            if (description) todayData.description = description;
+            
+            updateUI();
+            
+            await saveData(type, timeValue, theme, description);
+            
+            const typeNames = {
+                'home-departure': 'Losfahrt von Zuhause',
+                'work-arrival': 'Ankunft auf der Arbeit',
+                'work-departure': 'Losfahrt von der Arbeit',
+                'home-arrival': 'Ankunft Zuhause'
+            };
+            
+            showToast(`✅ ${typeNames[type]} um ${timeValue} erfasst`, 'success');
+            
+            // Reload themes if new one was added
+            if (theme && !availableThemes.find(t => t.name === theme)) {
+                setTimeout(loadThemes, 1000);
+            }
+        }
+
+        // Save data to backend
+        async function saveData(timeType, timeValue, theme = '', description = '') {
+            try {
                 const params = new URLSearchParams({
                     action: 'save',
-                    date: today,
-                    workMode: modeTranslation[todayData.workMode] || todayData.workMode,
-                    homeDeparture: todayData['home-departure'] || '',
-                    workArrival: todayData['work-arrival'] || '',
-                    workDeparture: todayData['work-departure'] || '',
-                    homeArrival: todayData['home-arrival'] || ''
+                    date: todayData.date,
+                    workMode: todayData.workMode,
+                    pendelArt: todayData.pendelArt || '',
+                    timeType: timeType,
+                    timeValue: timeValue || todayData[timeType] || ''
                 });
+                
+                const themeValue = theme !== undefined ? theme : todayData.theme;
+                const descriptionValue = description !== undefined ? description : todayData.description;
+                
+                if (themeValue && themeValue.trim() !== '') {
+                    params.set('theme', themeValue);
+                }
+                if (descriptionValue && descriptionValue.trim() !== '') {
+                    params.set('description', descriptionValue);
+                }
                 
                 const url = `${config.appsScriptUrl}?${params.toString()}`;
-                
-                const response = await fetch(url, {
-                    method: 'GET'
-                });
-                
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 if (!result.success) {
                     console.error('Save failed:', result.error);
-                    showToast('⚠️ Fehler beim Speichern', 'error');
+                    showToast('⚠️ Speichern fehlgeschlagen', 'error');
                 }
-                
             } catch (error) {
-                console.error('Error saving to Google Sheets:', error);
+                console.error('Error saving:', error);
                 showToast('⚠️ Fehler beim Speichern', 'error');
             }
         }
 
-        // Export to CSV via Apps Script
-        async function exportToCSV() {
+        // Save theme/description explicitly (robust fallback)
+        async function saveMeta(theme, description) {
             try {
-                const url = `${config.appsScriptUrl}?action=getAllData`;
+                const params = new URLSearchParams({
+                    action: 'saveMeta',
+                    date: todayData.date,
+                    workMode: todayData.workMode,
+                    pendelArt: todayData.pendelArt || ''
+                });
+                
+                if (theme && theme.trim() !== '') {
+                    params.set('theme', theme);
+                }
+                if (description && description.trim() !== '') {
+                    params.set('description', description);
+                }
+                
+                const url = `${config.appsScriptUrl}?${params.toString()}`;
                 const response = await fetch(url);
                 const result = await response.json();
                 
-                if (!result.success || !result.data || result.data.length === 0) {
-                    showToast('⚠️ Keine Daten zum Exportieren', 'error');
-                    return;
+                if (!result.success) {
+                    console.error('Meta save failed:', result.error);
                 }
-                
-                // Add headers
-                const headers = ['Datum', 'Modus', 'Losfahrt Zuhause', 'Ankunft Arbeit', 'Losfahrt Arbeit', 'Ankunft Zuhause', 'Arbeitszeit', 'Pendelzeit'];
-                const allRows = [headers, ...result.data];
-                
-                // Convert to CSV
-                const csv = allRows.map(row => row.join(';')).join('\n');
-                
-                // Download
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `arbeitszeit_${new Date().toISOString().split('T')[0]}.csv`;
-                link.click();
-                
-                showToast('✅ CSV-Export erfolgreich!', 'success');
             } catch (error) {
-                showToast('❌ Export fehlgeschlagen: ' + error.message, 'error');
+                console.error('Error saving meta:', error);
             }
         }
 
-        // Show toast notification
+        // Show missing days modal
+        function showMissingDaysModal(days) {
+            missingDays = days;
+            
+            const listDiv = document.getElementById('missingDaysList');
+            listDiv.innerHTML = '';
+            
+            days.forEach(date => {
+                const item = document.createElement('div');
+                item.className = 'missing-day-item';
+                
+                const dateStr = date.toLocaleDateString('de-DE', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                
+                item.innerHTML = `<div class="missing-day-date">${dateStr}</div>`;
+                listDiv.appendChild(item);
+            });
+            
+            openModal('missingDaysModal');
+        }
+
+        // Handle missing days apply
+        async function handleMissingDaysApply() {
+            const mode = document.getElementById('missingDayMode').value;
+            
+            if (mode === 'vergessen') {
+                closeModal('missingDaysModal');
+                showToast('Du kannst die Tage später nachtragen', 'info');
+                return;
+            }
+            
+            // Save absence for all missing days
+            for (const date of missingDays) {
+                const dateStr = date.toLocaleDateString('de-DE');
+                await saveMissingDay(dateStr, mode);
+            }
+            
+            closeModal('missingDaysModal');
+            showToast(`✅ ${missingDays.length} Tag(e) als "${mode}" markiert`, 'success');
+        }
+
+        // Save missing day with absence mode
+        async function saveMissingDay(dateStr, mode) {
+            try {
+                const params = new URLSearchParams({
+                    action: 'save',
+                    date: dateStr,
+                    workMode: mode,
+                    pendelArt: '',
+                    timeType: '',
+                    timeValue: '',
+                    theme: '',
+                    description: ''
+                });
+                
+                const url = `${config.appsScriptUrl}?${params.toString()}`;
+                await fetch(url);
+            } catch (error) {
+                console.error('Error saving missing day:', error);
+            }
+        }
+
+        // Modal helpers
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Toast notification
         function showToast(message, type = 'info') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
-            toast.className = 'toast show ' + type;
+            toast.className = `toast show ${type}`;
             
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
         }
 
-        // PWA Service Worker Registration
+        // PWA Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('service-worker.js')
-                    .then(registration => {
-                        console.log('✅ Service Worker registriert:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('❌ Service Worker Fehler:', error);
-                    });
+                    .then(reg => console.log('✅ SW registered'))
+                    .catch(err => console.log('❌ SW error:', err));
             });
         }
-
-        // PWA Install Prompt
-        let deferredPrompt;
-        
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            // Show install button after setup is complete
-            if (config.apiKey && config.spreadsheetId) {
-                showInstallPrompt();
-            }
-        });
-
-        function showInstallPrompt() {
-            if (!deferredPrompt) return;
-            
-            // Only show once per session
-            if (sessionStorage.getItem('installPromptShown')) return;
-            
-            setTimeout(() => {
-                const install = confirm('📱 Möchtest du die App auf deinem Gerät installieren?\n\nDann kannst du sie wie eine normale App verwenden!');
-                
-                if (install && deferredPrompt) {
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then((choiceResult) => {
-                        if (choiceResult.outcome === 'accepted') {
-                            showToast('✅ App wird installiert...', 'success');
-                        }
-                        deferredPrompt = null;
-                    });
-                }
-                
-                sessionStorage.setItem('installPromptShown', 'true');
-            }, 3000);
-        }
-
-        window.addEventListener('appinstalled', () => {
-            showToast('🎉 App erfolgreich installiert!', 'success');
-            deferredPrompt = null;
-        });
 
         // Start app
         init();
