@@ -67,6 +67,21 @@
             display: none !important;
         }
 
+        .app-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .app-logo {
+            height: 80px;
+            width: auto;
+            max-width: 100%;
+            border-radius: 16px;
+            object-fit: contain;
+        }
+
         .info-box {
             background: #e3f2fd;
             border-left: 4px solid #2196F3;
@@ -443,17 +458,23 @@
             position: absolute;
             top: 10px;
             right: 10px;
-            background: transparent;
-            border: none;
-            font-size: 18px;
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid rgba(0,0,0,0.12);
+            font-size: 16px;
             cursor: pointer;
-            color: inherit;
-            padding: 4px 6px;
-            border-radius: 6px;
+            color: #333;
+            padding: 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
 
         .absence-menu-btn:hover {
-            background: rgba(0,0,0,0.08);
+            background: rgba(255,255,255,1);
         }
 
         .absence-menu {
@@ -563,7 +584,9 @@
     <div class="container">
         <!-- Setup Screen -->
         <div class="card setup-screen active" id="setupScreen">
-            <h1>⚙️ Einrichtung</h1>
+            <div class="app-header">
+                <img src="logo.svg" alt="Zeiterfassung" class="app-logo">
+            </div>
             <p class="subtitle">Verbinde die App mit Google Sheets</p>
 
             <div class="info-box">
@@ -589,8 +612,10 @@
 
         <!-- Main App Screen -->
         <div class="card main-screen" id="mainScreen">
-            <h1>⏱️ Zeiterfassung</h1>
-            <p class="subtitle">Erfasse deine täglichen Zeiten</p>
+            <div class="app-header">
+                <img src="logo.svg" alt="Zeiterfassung" class="app-logo">
+            </div>
+            <p class="subtitle"></p>
 
             <div class="status-display">
                 <div class="current-date" id="currentDate"></div>
@@ -614,7 +639,7 @@
 
             <!-- Absence Mode Display (nur bei Urlaub/Krank/Abwesend) -->
             <div class="absence-mode hidden" id="absenceMode">
-                <button class="absence-menu-btn" id="absenceMenuToggle" title="Abwesenheit-Optionen">⋮</button>
+                <button class="absence-menu-btn" id="absenceMenuToggle" title="Abwesenheit-Optionen">☰</button>
                 <div class="absence-icon" id="absenceIcon">🏖️</div>
                 <div class="absence-text" id="absenceText">Heute: Urlaub</div>
                 <p style="margin-top: 10px; font-size: 13px;">Keine Zeiterfassung nötig</p>
@@ -1101,6 +1126,7 @@
             const absenceIcon = document.getElementById('absenceIcon');
             const absenceText = document.getElementById('absenceText');
             const absenceDescriptionGroup = document.getElementById('absenceDescriptionGroup');
+            const absenceMenuToggle = document.getElementById('absenceMenuToggle');
             
             // Reset everything
             buttons.forEach(btn => btn.classList.remove('hidden'));
@@ -1125,6 +1151,12 @@
                 };
                 absenceIcon.textContent = icons[mode] || '📅';
                 absenceText.textContent = `Heute: ${mode}`;
+                
+                if (mode === 'Feiertag') {
+                    absenceMenuToggle.classList.add('hidden');
+                } else {
+                    absenceMenuToggle.classList.remove('hidden');
+                }
                 
                 // Show description only for "Abwesend"
                 if (mode === 'Abwesend') {
