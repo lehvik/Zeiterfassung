@@ -381,6 +381,16 @@
             color: #e65100;
         }
 
+        .missing-day-times {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .missing-day-times input[type="time"] {
+            width: 100%;
+        }
+
         /* Toast Notifications */
         .toast {
             position: fixed;
@@ -430,8 +440,8 @@
         }
 
         .absence-mode.krank {
-            background: #ffebee;
-            color: #c62828;
+            background: #e3f2fd;
+            color: #1976d2;
         }
 
         .absence-mode.abwesend {
@@ -615,7 +625,6 @@
             <div class="app-header">
                 <img src="logo.svg" alt="Zeiterfassung" class="app-logo">
             </div>
-            <p class="subtitle"></p>
 
             <div class="status-display">
                 <div class="current-date" id="currentDate"></div>
@@ -751,12 +760,24 @@
             <div class="modal-title">📋 Tagesrückblick</div>
             <div class="modal-body">
                 <p style="margin-bottom: 15px; color: #666;">Woran hast du heute gearbeitet?</p>
-                
+
                 <div class="form-group">
-                    <label for="themeInput">Thema / Projekt:</label>
+                    <label for="themeSelect">Vorhandene Themen:</label>
+                    <div class="hint" id="currentThemeHint">Aktuell: —</div>
+                    <select id="themeSelect"></select>
+                    <div class="hint">Auswahl übernimmt das Thema unten.</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="themeInput">Thema / Projekt (neu oder ändern):</label>
                     <input type="text" id="themeInput" placeholder="z.B. Projekt ABC" list="themeSuggestions">
                     <datalist id="themeSuggestions"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label>Zuletzt verwendet (3):</label>
                     <div class="theme-suggestions" id="themeChips"></div>
+                    <div class="hint">Klick auf ein Thema, um es direkt zu setzen.</div>
                 </div>
 
                 <div class="form-group">
@@ -788,11 +809,20 @@
                     <label for="missingDayMode">Was war an diesem Tag?</label>
                     <select id="missingDayMode">
                         <option value="vergessen">❌ Vergessen (später nachtragen)</option>
+                        <option value="schaetzung">📝 Schätzung (Start/Ende)</option>
                         <option value="Urlaub">🏖️ Urlaub</option>
                         <option value="Krank">🤒 Krank</option>
                         <option value="Feiertag">🎉 Feiertag</option>
                         <option value="Abwesend">📅 Sonstige Abwesenheit</option>
                     </select>
+                </div>
+                <div class="form-group hidden" id="missingDayTimes">
+                    <label>Arbeitszeit (Schätzung):</label>
+                    <div class="missing-day-times">
+                        <input type="time" id="missingStart" placeholder="Start">
+                        <input type="time" id="missingEnd" placeholder="Ende">
+                    </div>
+                    <div class="hint">Nur Arbeitsbeginn/-ende, Fahrzeiten bleiben leer.</div>
                 </div>
             </div>
             <div class="modal-buttons">
@@ -882,10 +912,12 @@
             // Theme modal buttons
             document.getElementById('themeConfirm').addEventListener('click', handleThemeConfirm);
             document.getElementById('themeSkip').addEventListener('click', handleThemeSkip);
+            document.getElementById('themeSelect').addEventListener('change', handleThemeSelectChange);
 
             // Missing days modal buttons
             document.getElementById('missingDaysApply').addEventListener('click', handleMissingDaysApply);
             document.getElementById('missingDaysSkip').addEventListener('click', () => closeModal('missingDaysModal'));
+            document.getElementById('missingDayMode').addEventListener('change', handleMissingDayModeChange);
         }
 
         // Load configuration from localStorage
@@ -1013,7 +1045,7 @@
                 
                 // Get last entry date
                 const lastEntry = result.data[result.data.length - 1];
-                const lastDate = parseGermanDate(lastEntry[0]); // Spalte 0 ist Datum
+                const lastDate = parseGermanDate(getDateFromRow(lastEntry));
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 
@@ -1030,7 +1062,7 @@
                     if (dayOfWeek !== 0 && dayOfWeek !== 6) {
                         const dateStr = currentDate.toLocaleDateString('de-DE');
                         // Prüfen ob Tag nicht bereits eingetragen wurde
-                        const exists = result.data.some(row => row[0] === dateStr);
+                        const exists = result.data.some(row => getDateFromRow(row) === dateStr);
                         if (!exists) {
                             missingDays.push(new Date(currentDate));
                         }
@@ -1060,6 +1092,19 @@
             return new Date(year, month, day);
         }
 
+        function getDateFromRow(row) {
+            if (!row || row.length === 0) return '';
+            const candidate0 = row[0];
+            if (typeof candidate0 === 'string' && /^\d{2}\.\d{2}\.\d{4}$/.test(candidate0)) {
+                return candidate0;
+            }
+            const candidate2 = row[2];
+            if (typeof candidate2 === 'string' && /^\d{2}\.\d{2}\.\d{4}$/.test(candidate2)) {
+                return candidate2;
+            }
+            return '';
+        }
+
         // Load available themes
         async function loadThemes() {
             try {
@@ -1083,22 +1128,49 @@
         function updateThemeSuggestions() {
             const datalist = document.getElementById('themeSuggestions');
             const chips = document.getElementById('themeChips');
+            const select = document.getElementById('themeSelect');
             
             datalist.innerHTML = '';
             chips.innerHTML = '';
-            
-            availableThemes.slice(0, 10).forEach(theme => {
+            select.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Neues Thema eingeben';
+            select.appendChild(defaultOption);
+
+            availableThemes.forEach((theme) => {
                 // Datalist option
                 const option = document.createElement('option');
                 option.value = theme.name;
                 datalist.appendChild(option);
-                
-                // Chip
+
+                // Select option
+                const selectOption = document.createElement('option');
+                selectOption.value = theme.name;
+                selectOption.textContent = `${theme.name} (${theme.count})`;
+                select.appendChild(selectOption);
+            });
+
+            // Chips: zuletzt verwendete 3
+            const recentThemes = availableThemes
+                .map(t => ({
+                    name: t.name,
+                    count: t.count,
+                    lastUsed: t.lastUsed,
+                    lastUsedDate: parseGermanDate(t.lastUsed)
+                }))
+                .filter(t => t.lastUsedDate)
+                .sort((a, b) => b.lastUsedDate - a.lastUsedDate)
+                .slice(0, 3);
+            
+            recentThemes.forEach(theme => {
                 const chip = document.createElement('div');
                 chip.className = 'theme-chip';
                 chip.textContent = theme.name;
                 chip.onclick = () => {
                     document.getElementById('themeInput').value = theme.name;
+                    select.value = theme.name;
                 };
                 chips.appendChild(chip);
             });
@@ -1485,15 +1557,53 @@
 
         // FEATURE 2: Show theme modal
         function showThemeModal() {
-            document.getElementById('themeInput').value = todayData.theme || '';
+            document.getElementById('themeInput').value = '';
             document.getElementById('descriptionInput').value = todayData.description || '';
+            document.getElementById('currentThemeHint').textContent = todayData.theme
+                ? `Aktuell: ${todayData.theme}`
+                : 'Aktuell: —';
+            syncThemeSelect();
             openModal('themeModal');
+        }
+
+        function syncThemeSelect() {
+            const select = document.getElementById('themeSelect');
+            const current = todayData.theme || '';
+            if (!select) return;
+            
+            if (select.options.length === 0) {
+                updateThemeSuggestions();
+            }
+            
+            const hasOption = Array.from(select.options).some(opt => opt.value === current);
+            if (current && !hasOption) {
+                const opt = document.createElement('option');
+                opt.value = current;
+                opt.textContent = current;
+                select.appendChild(opt);
+            }
+            
+            select.value = current || '';
+        }
+
+        function handleThemeSelectChange(e) {
+            const value = e.target.value;
+            if (value) {
+                document.getElementById('themeInput').value = value;
+            } else {
+                document.getElementById('themeInput').value = '';
+            }
         }
 
         // Handle theme confirmation
         async function handleThemeConfirm() {
-            const theme = document.getElementById('themeInput').value.trim();
+            let theme = document.getElementById('themeInput').value.trim();
             const description = document.getElementById('descriptionInput').value.trim();
+
+            if (!theme) {
+                const selectValue = document.getElementById('themeSelect').value;
+                theme = selectValue || todayData.theme || '';
+            }
             
             todayData.theme = theme;
             todayData.description = description;
@@ -1634,33 +1744,54 @@
                 item.innerHTML = `<div class="missing-day-date">${dateStr}</div>`;
                 listDiv.appendChild(item);
             });
-            
+            handleMissingDayModeChange();
             openModal('missingDaysModal');
         }
 
         // Handle missing days apply
         async function handleMissingDaysApply() {
             const mode = document.getElementById('missingDayMode').value;
+            const start = document.getElementById('missingStart').value;
+            const end = document.getElementById('missingEnd').value;
             
-            if (mode === 'vergessen') {
-                closeModal('missingDaysModal');
-                showToast('Du kannst die Tage später nachtragen', 'info');
-                return;
+            if (mode === 'schaetzung') {
+                if (!start || !end) {
+                    showToast('Bitte Start und Ende angeben', 'error');
+                    return;
+                }
             }
             
-            // Save absence for all missing days
             for (const date of missingDays) {
                 const dateStr = date.toLocaleDateString('de-DE');
-                await saveMissingDay(dateStr, mode);
+                await saveMissingDay(dateStr, mode, start, end);
             }
             
             closeModal('missingDaysModal');
-            showToast(`✅ ${missingDays.length} Tag(e) als "${mode}" markiert`, 'success');
+            
+            if (mode === 'vergessen') {
+                showToast(`✅ ${missingDays.length} Tag(e) als "Fehlt" markiert`, 'success');
+            } else if (mode === 'schaetzung') {
+                showToast(`✅ ${missingDays.length} Tag(e) als "Schätzung" gespeichert`, 'success');
+            } else {
+                showToast(`✅ ${missingDays.length} Tag(e) als "${mode}" markiert`, 'success');
+            }
         }
 
         // Save missing day with absence mode
-        async function saveMissingDay(dateStr, mode) {
+        async function saveMissingDay(dateStr, mode, start, end) {
             try {
+                if (mode === 'schaetzung') {
+                    await saveMissingDayTime(dateStr, start, 'work-arrival');
+                    await saveMissingDayTime(dateStr, end, 'work-departure');
+                    await saveMissingDayMeta(dateStr, 'Schätzung');
+                    return;
+                }
+                
+                if (mode === 'vergessen') {
+                    await saveMissingDayMeta(dateStr, 'Fehlt');
+                    return;
+                }
+                
                 const params = new URLSearchParams({
                     action: 'save',
                     date: dateStr,
@@ -1669,13 +1800,50 @@
                     timeType: '',
                     timeValue: '',
                     theme: '',
-                    description: ''
+                    description: '',
+                    status: ''
                 });
                 
                 const url = `${config.appsScriptUrl}?${params.toString()}`;
                 await fetch(url);
             } catch (error) {
                 console.error('Error saving missing day:', error);
+            }
+        }
+
+        async function saveMissingDayTime(dateStr, timeValue, timeType) {
+            const params = new URLSearchParams({
+                action: 'save',
+                date: dateStr,
+                workMode: 'Pendeln',
+                pendelArt: '',
+                timeType: timeType,
+                timeValue: timeValue,
+                status: 'Schätzung'
+            });
+            const url = `${config.appsScriptUrl}?${params.toString()}`;
+            await fetch(url);
+        }
+
+        async function saveMissingDayMeta(dateStr, statusValue) {
+            const params = new URLSearchParams({
+                action: 'saveMeta',
+                date: dateStr,
+                workMode: '',
+                pendelArt: '',
+                status: statusValue
+            });
+            const url = `${config.appsScriptUrl}?${params.toString()}`;
+            await fetch(url);
+        }
+
+        function handleMissingDayModeChange() {
+            const mode = document.getElementById('missingDayMode').value;
+            const timeGroup = document.getElementById('missingDayTimes');
+            if (mode === 'schaetzung') {
+                timeGroup.classList.remove('hidden');
+            } else {
+                timeGroup.classList.add('hidden');
             }
         }
 
