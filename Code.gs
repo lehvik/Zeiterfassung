@@ -20,6 +20,8 @@ const MAIN_HEADERS = [
   'Thema/Projekt',
   'Beschreibung',
   'Arbeitszeit',
+  'Pause (min)',
+  'Effektive Arbeitszeit',
   'Pendelzeit',
   'Status'
 ];
@@ -46,6 +48,22 @@ const HEADERS_V2 = [
   'Arbeitszeit',
   'Pendelzeit'
 ];
+const HEADERS_V3 = [
+  'KW',
+  'Wochentag',
+  'Datum',
+  'Modus',
+  'Pendel-Art',
+  'Losfahrt Zuhause',
+  'Ankunft Arbeit',
+  'Losfahrt Arbeit',
+  'Ankunft Zuhause',
+  'Thema/Projekt',
+  'Beschreibung',
+  'Arbeitszeit',
+  'Pendelzeit',
+  'Status'
+];
 const HEADER_KEYS = {
   week: 'KW',
   weekday: 'Wochentag',
@@ -59,6 +77,8 @@ const HEADER_KEYS = {
   theme: 'Thema/Projekt',
   description: 'Beschreibung',
   workTime: 'Arbeitszeit',
+  breakMinutes: 'Pause (min)',
+  effectiveWork: 'Effektive Arbeitszeit',
   commuteTime: 'Pendelzeit',
   status: 'Status'
 };
@@ -94,16 +114,17 @@ function doGet(e) {
     
     if (action === 'save') {
       // Speichern der Zeitdaten
-    const data = {
-      date: e.parameter.date,
-      workMode: e.parameter.workMode,
-      pendelArt: e.parameter.pendelArt || '',
-      timeType: e.parameter.timeType, // home-departure, work-arrival, etc.
-      timeValue: e.parameter.timeValue,
-      theme: e.parameter.theme || '',
+      const data = {
+        date: e.parameter.date,
+        workMode: e.parameter.workMode,
+        pendelArt: e.parameter.pendelArt || '',
+        timeType: e.parameter.timeType, // home-departure, work-arrival, etc.
+        timeValue: e.parameter.timeValue,
+        theme: e.parameter.theme || '',
       description: e.parameter.description || '',
-      status: e.parameter.status || ''
-    };
+      status: e.parameter.status || '',
+      breakMinutes: e.parameter.breakMinutes || ''
+      };
       
       const result = saveTimeData(sheet, themesSheet, data);
       updateStatistics(sheet, statsSheet);
@@ -168,8 +189,9 @@ function doGet(e) {
         workMode: e.parameter.workMode,
         pendelArt: e.parameter.pendelArt || '',
         theme: e.parameter.theme || '',
-        description: e.parameter.description || '',
-        status: e.parameter.status || ''
+      description: e.parameter.description || '',
+      status: e.parameter.status || '',
+      breakMinutes: e.parameter.breakMinutes || ''
       };
       
       const result = saveTimeData(sheet, themesSheet, data);
@@ -394,6 +416,15 @@ function ensureSheetSchema(sheet) {
     return;
   }
   
+  // V3 Schema (14 Spalten) -> Pausen & Effektive Arbeitszeit nach Arbeitszeit
+  if (matches(normalized, HEADERS_V3.map(h => normalizeHeader(h)))) {
+    // Arbeitszeit-Spalte ist 12
+    sheet.insertColumns(13, 2);
+    initializeSheet(sheet);
+    fillDerivedColumns(sheet);
+    return;
+  }
+  
   // Altes Schema migrieren
   if (matches(normalized, LEGACY_HEADERS.map(h => normalizeHeader(h)))) {
     // Pendel-Art (Spalte C) einfügen
@@ -440,7 +471,10 @@ function initializeSheet(sheet) {
   sheet.setColumnWidth(5, 120); // Pendel-Art
   sheet.setColumnWidth(10, 150); // Thema/Projekt
   sheet.setColumnWidth(11, 200); // Beschreibung
-  sheet.setColumnWidth(14, 100); // Status
+  sheet.setColumnWidth(12, 120); // Arbeitszeit
+  sheet.setColumnWidth(13, 90);  // Pause (min)
+  sheet.setColumnWidth(14, 150); // Effektive Arbeitszeit
+  sheet.setColumnWidth(16, 100); // Status
   
   // KW Format "KW 06"
   sheet.getRange(2, 1, sheet.getMaxRows() - 1, 1).setNumberFormat('"KW "00');
@@ -515,6 +549,7 @@ function updateStatistics(mainSheet, statsSheet) {
   
   const headerMap = getHeaderMap(mainSheet);
   const colDate = findHeaderIndex(headerMap, [HEADER_KEYS.date]);
+  const colMode = findHeaderIndex(headerMap, [HEADER_KEYS.mode]);
   const colWorkTime = findHeaderIndex(headerMap, [HEADER_KEYS.workTime]);
   const colCommuteTime = findHeaderIndex(headerMap, [HEADER_KEYS.commuteTime]);
   const colWorkArrival = findHeaderIndex(headerMap, [HEADER_KEYS.workArrival, 'Ankunft\nArbeit']);
@@ -1195,6 +1230,8 @@ function saveTimeData(sheet, themesSheet, data) {
   const idxTheme = findHeaderIndex(headerMap, [HEADER_KEYS.theme, 'Thema / Projekt']);
   const idxDescription = findHeaderIndex(headerMap, [HEADER_KEYS.description]);
   const idxWorkTime = findHeaderIndex(headerMap, [HEADER_KEYS.workTime]);
+  const idxBreakMinutes = findHeaderIndex(headerMap, [HEADER_KEYS.breakMinutes]);
+  const idxEffectiveWork = findHeaderIndex(headerMap, [HEADER_KEYS.effectiveWork]);
   const idxCommuteTime = findHeaderIndex(headerMap, [HEADER_KEYS.commuteTime]);
   const idxStatus = findHeaderIndex(headerMap, [HEADER_KEYS.status]);
   
@@ -1210,6 +1247,8 @@ function saveTimeData(sheet, themesSheet, data) {
   const colTheme = idxTheme !== undefined ? idxTheme : defaultIndex(HEADER_KEYS.theme);
   const colDescription = idxDescription !== undefined ? idxDescription : defaultIndex(HEADER_KEYS.description);
   const colWorkTime = idxWorkTime !== undefined ? idxWorkTime : defaultIndex(HEADER_KEYS.workTime);
+  const colBreakMinutes = idxBreakMinutes !== undefined ? idxBreakMinutes : defaultIndex(HEADER_KEYS.breakMinutes);
+  const colEffectiveWork = idxEffectiveWork !== undefined ? idxEffectiveWork : defaultIndex(HEADER_KEYS.effectiveWork);
   const colCommuteTime = idxCommuteTime !== undefined ? idxCommuteTime : defaultIndex(HEADER_KEYS.commuteTime);
   const colStatus = idxStatus !== undefined ? idxStatus : defaultIndex(HEADER_KEYS.status);
   
@@ -1291,11 +1330,12 @@ function saveTimeData(sheet, themesSheet, data) {
   }
 
   // Arbeits- und Pendelzeit immer aus aktuellen Zellen berechnen
-  if (colWorkTime !== undefined || colCommuteTime !== undefined) {
+  if (colWorkTime !== undefined || colCommuteTime !== undefined || colEffectiveWork !== undefined) {
     const arrival = colWorkArrival !== undefined ? sheet.getRange(rowIndex, colWorkArrival + 1).getValue() : '';
     const departure = colWorkDeparture !== undefined ? sheet.getRange(rowIndex, colWorkDeparture + 1).getValue() : '';
+    const workMinutes = computeWorkMinutesFromTimes(arrival, departure);
     if (colWorkTime !== undefined) {
-      sheet.getRange(rowIndex, colWorkTime + 1).setValue(calculateWorkTime(arrival, departure));
+      sheet.getRange(rowIndex, colWorkTime + 1).setValue(formatMinutes(workMinutes));
     }
     
     const effectiveMode = data.workMode || (colMode !== undefined ? sheet.getRange(rowIndex, colMode + 1).getValue() : '');
@@ -1310,6 +1350,15 @@ function saveTimeData(sheet, themesSheet, data) {
       } else {
         sheet.getRange(rowIndex, colCommuteTime + 1).setValue('');
       }
+    }
+    
+    const breakMinutes = parseBreakMinutes(data.breakMinutes);
+    if (colBreakMinutes !== undefined) {
+      sheet.getRange(rowIndex, colBreakMinutes + 1).setValue(workMinutes > 0 ? breakMinutes : '');
+    }
+    if (colEffectiveWork !== undefined) {
+      const effectiveMinutes = Math.max(0, workMinutes - breakMinutes);
+      sheet.getRange(rowIndex, colEffectiveWork + 1).setValue(workMinutes > 0 ? formatMinutes(effectiveMinutes) : '');
     }
   }
   
@@ -1564,6 +1613,8 @@ function buildDebugInfo(spreadsheet, sheet) {
       theme: indexFor(HEADER_KEYS.theme),
       description: indexFor(HEADER_KEYS.description),
       workTime: indexFor(HEADER_KEYS.workTime),
+      breakMinutes: indexFor(HEADER_KEYS.breakMinutes),
+      effectiveWork: indexFor(HEADER_KEYS.effectiveWork),
       commuteTime: indexFor(HEADER_KEYS.commuteTime),
       status: indexFor(HEADER_KEYS.status)
     }
@@ -1655,6 +1706,28 @@ function parseTime(timeStr) {
   if (isNaN(hours) || isNaN(minutes)) return null;
   
   return hours * 60 + minutes;
+}
+
+function parseBreakMinutes(value) {
+  const num = parseInt(String(value || '').trim(), 10);
+  if (isNaN(num) || num < 0) return 30;
+  return num;
+}
+
+function computeWorkMinutesFromTimes(arrival, departure) {
+  const start = parseTime(arrival);
+  const end = parseTime(departure);
+  if (start === null || end === null) return 0;
+  let diff = end - start;
+  if (diff < 0) diff += 24 * 60;
+  return diff;
+}
+
+function formatMinutes(minutes) {
+  if (!minutes || minutes <= 0) return '';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}h ${m}m`;
 }
 
 /**

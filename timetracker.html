@@ -96,6 +96,27 @@
             margin-bottom: 20px;
         }
 
+        .form-group.compact {
+            margin-bottom: 14px;
+        }
+
+        .inline-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .input-compact {
+            width: 120px;
+            max-width: 100%;
+        }
+
+        .hint.inline {
+            margin-top: 0;
+            color: #777;
+        }
+
         label {
             display: block;
             margin-bottom: 8px;
@@ -105,6 +126,7 @@
         }
 
         input[type="text"],
+        input[type="number"],
         input[type="time"],
         select,
         textarea {
@@ -614,8 +636,19 @@
                     <div class="hint">Die URL nach dem Deployment</div>
                 </div>
 
+                <div class="form-group compact">
+                    <label for="breakMinutes">Pausenzeit (Minuten)</label>
+                    <div class="inline-field">
+                        <input type="number" id="breakMinutes" class="input-compact" min="0" step="5" value="30">
+                        <div class="hint inline">Wird bei der effektiven Arbeitszeit abgezogen</div>
+                    </div>
+                </div>
+
                 <button type="submit" class="btn-primary">
                     Verbindung testen & speichern
+                </button>
+                <button type="button" class="btn-secondary hidden" id="settingsBack">
+                    Zurück
                 </button>
             </form>
         </div>
@@ -842,7 +875,8 @@
     <script>
         // Configuration
         let config = {
-            appsScriptUrl: ''
+            appsScriptUrl: '',
+            breakMinutes: 30
         };
 
         // Today's tracking data
@@ -889,6 +923,7 @@
             // Event listeners
             document.getElementById('setupForm').addEventListener('submit', handleSetup);
             document.getElementById('settingsBtn').addEventListener('click', showSetupScreen);
+            document.getElementById('settingsBack').addEventListener('click', showMainScreen);
             document.getElementById('workMode').addEventListener('change', handleWorkModeChange);
             document.getElementById('absenceMenuToggle').addEventListener('click', toggleAbsenceMenu);
             document.getElementById('absenceSave').addEventListener('click', handleAbsenceSave);
@@ -926,6 +961,9 @@
             if (saved) {
                 config = JSON.parse(saved);
             }
+            if (!config.breakMinutes && config.breakMinutes !== 0) {
+                config.breakMinutes = 30;
+            }
         }
 
         // Save configuration to localStorage
@@ -950,6 +988,13 @@
             document.getElementById('setupScreen').classList.add('active');
             document.getElementById('mainScreen').classList.remove('active');
             document.getElementById('appsScriptUrl').value = config.appsScriptUrl || '';
+            document.getElementById('breakMinutes').value = config.breakMinutes ?? 30;
+            const backBtn = document.getElementById('settingsBack');
+            if (config.appsScriptUrl) {
+                backBtn.classList.remove('hidden');
+            } else {
+                backBtn.classList.add('hidden');
+            }
         }
 
         // Show main screen
@@ -963,6 +1008,8 @@
             e.preventDefault();
             
             const url = document.getElementById('appsScriptUrl').value.trim();
+            const breakValue = document.getElementById('breakMinutes').value;
+            const breakMinutes = Math.max(0, parseInt(breakValue, 10) || 0);
             showToast('Verbindung wird getestet...', 'info');
             
             try {
@@ -970,6 +1017,7 @@
                 
                 if (testResult.success) {
                     config.appsScriptUrl = url;
+                    config.breakMinutes = breakMinutes;
                     saveConfig();
                     
                     showToast('✅ Verbindung erfolgreich!', 'success');
@@ -1400,10 +1448,12 @@
 
         // Update UI with current data
         function updateUI() {
+            const durations = computeStatusDurations();
             ['home-departure', 'work-arrival', 'work-departure', 'home-arrival'].forEach(type => {
                 const timeEl = document.getElementById(`time-${type}`);
                 if (timeEl && todayData[type]) {
-                    timeEl.textContent = `✓ ${todayData[type]}`;
+                    const durationText = durations[type] ? ` | ${durations[type]}` : '';
+                    timeEl.textContent = `✓ ${todayData[type]}${durationText}`;
                 } else if (timeEl) {
                     timeEl.textContent = '';
                 }
@@ -1432,11 +1482,73 @@
                     'work-departure': mode === 'HomeOffice' ? 'Feierabend' : 'Auf dem Heimweg',
                     'home-arrival': 'Zuhause angekommen'
                 };
+                const sinceTime = todayData[lastTracked];
+                const duration = getDurationSince(sinceTime);
+                const durationText = duration ? ` (${duration})` : '';
                 document.getElementById('currentStatus').textContent = 
-                    `Status: ${statusMap[lastTracked]} (${todayData[lastTracked]})`;
+                    `Status: ${statusMap[lastTracked]} seit ${sinceTime}${durationText}`;
             } else {
                 document.getElementById('currentStatus').textContent = 'Bereit zum Tracken';
             }
+        }
+
+        function parseTimeToMinutes(timeStr) {
+            if (!timeStr) return null;
+            const str = String(timeStr).trim();
+            if (!str) return null;
+            if (str.includes('T')) {
+                const parsed = new Date(str);
+                if (!isNaN(parsed.getTime())) {
+                    return parsed.getHours() * 60 + parsed.getMinutes();
+                }
+            }
+            const parts = str.split(':');
+            if (parts.length !== 2) return null;
+            const h = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            if (isNaN(h) || isNaN(m)) return null;
+            return h * 60 + m;
+        }
+
+        function formatDuration(minutes) {
+            const h = Math.floor(minutes / 60);
+            const m = minutes % 60;
+            return `${h}h ${m}m`;
+        }
+
+        function getStatusSequence(mode) {
+            if (mode === 'HomeOffice' || mode === 'Stempeln') {
+                return ['work-arrival', 'work-departure'];
+            }
+            return ['home-departure', 'work-arrival', 'work-departure', 'home-arrival'];
+        }
+
+        function computeStatusDurations() {
+            const durations = {};
+            const seq = getStatusSequence(todayData.workMode);
+            
+            for (let i = 0; i < seq.length - 1; i++) {
+                const startType = seq[i];
+                const endType = seq[i + 1];
+                const start = parseTimeToMinutes(todayData[startType]);
+                const end = parseTimeToMinutes(todayData[endType]);
+                if (start === null || end === null) continue;
+                
+                let diff = end - start;
+                if (diff < 0) diff += 24 * 60;
+                durations[startType] = formatDuration(diff);
+            }
+            
+            return durations;
+        }
+
+        function getDurationSince(timeStr) {
+            const since = parseTimeToMinutes(timeStr);
+            if (since === null) return '';
+            const now = new Date();
+            let diff = now.getHours() * 60 + now.getMinutes() - since;
+            if (diff < 0) diff += 24 * 60;
+            return formatDuration(diff);
         }
 
         // Handle track button click
@@ -1667,7 +1779,8 @@
                     workMode: todayData.workMode,
                     pendelArt: todayData.pendelArt || '',
                     timeType: timeType,
-                    timeValue: timeValue || todayData[timeType] || ''
+                    timeValue: timeValue || todayData[timeType] || '',
+                    breakMinutes: String(config.breakMinutes ?? 30)
                 });
                 
                 const themeValue = theme !== undefined ? theme : todayData.theme;
@@ -1701,7 +1814,8 @@
                     action: 'saveMeta',
                     date: todayData.date,
                     workMode: todayData.workMode,
-                    pendelArt: todayData.pendelArt || ''
+                    pendelArt: todayData.pendelArt || '',
+                    breakMinutes: String(config.breakMinutes ?? 30)
                 });
                 
                 if (theme && theme.trim() !== '') {
@@ -1819,7 +1933,8 @@
                 pendelArt: '',
                 timeType: timeType,
                 timeValue: timeValue,
-                status: 'Schätzung'
+                status: 'Schätzung',
+                breakMinutes: String(config.breakMinutes ?? 30)
             });
             const url = `${config.appsScriptUrl}?${params.toString()}`;
             await fetch(url);
@@ -1831,7 +1946,8 @@
                 date: dateStr,
                 workMode: '',
                 pendelArt: '',
-                status: statusValue
+                status: statusValue,
+                breakMinutes: String(config.breakMinutes ?? 30)
             });
             const url = `${config.appsScriptUrl}?${params.toString()}`;
             await fetch(url);
